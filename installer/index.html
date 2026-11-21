@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wii-OS · Installateur</title>
+<style>
+  :root {
+    --bg: #f1f2f3; --card: #ffffff; --ink: #5c6670; --muted: #8e9399; --line: #c9ced2;
+    --accent: #35b7ea; --accent-dark: #1790c4; --accent-ink: #ffffff; --accent-soft: #e6f6fd;
+    --ok: #5cb85c; --warn: #f0a30a; --err: #d9534f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Rounded Mplus 1c", "Nunito", "Varela Round", "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); min-height: 100vh;
+    background: repeating-linear-gradient(to bottom, #f1f2f3 0, #f1f2f3 2px, #e8eaec 2px, #e8eaec 3px);
+  }
+  .titlebar { max-width: 860px; margin: 0 auto; padding: 22px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--accent); background: linear-gradient(#fff, #eceeef);
+    display: grid; place-items: center; color: #b3b8bc; font-weight: 800; font-size: 17px; box-shadow: 0 2px 5px rgba(0,0,0,.12);
+  }
+  .logo i { display: none; }
+  .logo::after { content: "Wii"; }
+  .brand h1 { margin: 0; font-size: 28px; font-weight: 700; color: #7c8790; letter-spacing: .5px; }
+  .brand .sub { color: var(--muted); font-size: 13px; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 13px; background: #fff; border: 2px solid var(--accent); border-radius: 999px; padding: 6px 14px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #a0a6b0; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.err { background: var(--err); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 18px 16px 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: inset 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.06); }
+  .card h2 { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #6d7882; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card h2 small { color: var(--muted); font-weight: 400; font-size: 13px; }
+  ol.how { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  ol.how b { color: var(--ink); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .game { position: relative; border: 1px solid #bdc3c8; border-radius: 9px; padding: 12px 10px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; background: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.8); }
+  .game:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 8px rgba(53,183,234,.5); }
+  .game .ico { width: 44px; height: 44px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(160deg, #6fd0f5, #1790c4); }
+  .game .ico svg { width: 26px; }
+  .game .name { font-weight: 700; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game .file { color: var(--muted); font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game .remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; opacity: 0; }
+  .game:hover .remove, .game .remove:focus { opacity: 1; }
+  .game .remove:hover { background: var(--err); color: #fff; }
+  .add { border: 1px solid #d1d4d7; border-radius: 9px; display: grid; place-items: center; min-height: 112px; background: #e5e7e9; color: #b7bbbf; font-size: 13px; cursor: pointer; text-align: center; padding: 8px; font-weight: 700; }
+  .add .plus { font-size: 28px; color: #b0b5ba; line-height: 1; }
+  .add.over, .add:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+  .add:hover .plus, .add.over .plus { color: var(--accent); }
+  .meter { height: 8px; background: #e0e3e6; border-radius: 4px; overflow: hidden; border: 1px solid #d1d4d7; }
+  .meter div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .actions { display: flex; flex-direction: column; gap: 12px; }
+  button.install { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; border: 3px solid var(--accent); border-radius: 999px; padding: 11px 30px; font: inherit; font-weight: 700; font-size: 16px; color: var(--accent-dark); background: linear-gradient(#fff, #eef6fa); cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,.12); }
+  button.install:hover:not(:disabled) { background: var(--accent-soft); box-shadow: 0 0 0 3px rgba(53,183,234,.35), 0 2px 5px rgba(0,0,0,.12); }
+  button.install:disabled { border-color: #cfd3d6; color: #b3b8bc; background: #eceeef; cursor: default; box-shadow: none; }
+  button.install .logo { display: none; }
+  ul.steps { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+  ul.steps li { display: flex; align-items: center; gap: 10px; padding: 3px 0; color: var(--muted); }
+  ul.steps li .s { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #c0c6d0; flex: none; }
+  ul.steps li.running { color: var(--ink); }
+  ul.steps li.running .s { border-color: var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; }
+  ul.steps li.done .s { background: var(--accent); border-color: var(--accent); }
+  ul.steps li.error { color: var(--err); }
+  ul.steps li.error .s { background: var(--err); border-color: var(--err); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result { font-size: 14px; padding: 10px 14px; border-radius: 12px; display: none; }
+  .result.ok { display: block; background: #e6f6fd; color: #0e5f82; border: 1px solid var(--accent); }
+  .result.error { display: block; background: #fdeceb; color: #8a1c12; border: 1px solid #e8aaa6; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre { background: #f3f5f6; border-radius: 8px; padding: 10px; font-size: 11px; max-height: 260px; overflow: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="titlebar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div>
+      <h1>Wii-OS</h1>
+      <div class="sub">Installateur pour NumWorks n0110 / n0115 / n0120 · slot B</div>
+    </div>
+  </div>
+  <div class="status"><span class="dot" id="calcDot"></span><span id="calcText">Recherche…</span></div>
+</div>
+
+<div class="wrap">
+  <section class="card">
+    <h2>Avant d'installer</h2>
+    <ol class="how">
+      <li>Branche la calculatrice en USB.</li>
+      <li>Si elle est déjà sur Wii-OS, appuie sur <b>Reset</b> au dos : elle revient sur le système officiel (slot A).</li>
+      <li>Quand le voyant en haut à droite passe au vert, clique sur <b>Installer</b>.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Jeux <small id="gamesInfo"></small></h2>
+    <div class="grid" id="games"></div>
+    <input type="file" id="picker" accept=".nwa" multiple hidden>
+    <div class="meter" title="Place utilisée dans le slot B"><div id="meter"></div></div>
+    <div class="note" id="gamesNote">Les jeux apparaissent comme des chaînes dans le menu Wii.</div>
+  </section>
+
+  <section class="card actions">
+    <button class="install" id="install" disabled>Installer Wii-OS</button>
+    <ul class="steps" id="steps"></ul>
+    <div class="result" id="result"></div>
+    <details id="logBox" hidden>
+      <summary>Journal détaillé</summary>
+      <pre id="log"></pre>
+    </details>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SECTOR = 0x10000;
+let state = { calculator: { connected: null }, games: [], appsCapacity: 0, firmware: true };
+let installing = false;
+
+const gameIcon = '<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="8" y="30" width="84" height="44" rx="20" fill="#fff"/><path d="M28 44v16M20 52h16" stroke="#4a5db5" stroke-width="7" stroke-linecap="round"/><circle cx="64" cy="47" r="5" fill="#4a5db5"/><circle cx="75" cy="58" r="5" fill="#4a5db5"/></svg>';
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderCalc() {
+  const c = state.calculator;
+  const dot = $("calcDot"), text = $("calcText");
+  dot.className = "dot";
+  if (installing || c.connected === null) { text.textContent = installing ? "Installation…" : "Recherche…"; return; }
+  if (!c.connected) { dot.classList.add("err"); text.textContent = "Calculatrice non détectée"; }
+  else if (!["n0110", "n0115", "n0120"].includes(c.model)) { dot.classList.add("err"); text.textContent = `Modèle ${c.model} non supporté`; }
+  else if (c.inactiveSlot !== "B") { dot.classList.add("warn"); text.textContent = "Sur le slot B : appuie sur Reset"; }
+  else { dot.classList.add("ok"); text.textContent = `${c.model} prête`; }
+}
+
+function canInstall() {
+  const c = state.calculator;
+  return !installing && state.firmware && c.connected && ["n0110", "n0115", "n0120"].includes(c.model) && c.inactiveSlot === "B";
+}
+
+function renderGames() {
+  const grid = $("games");
+  grid.innerHTML = "";
+  let used = SECTOR;
+  for (const g of state.games) {
+    used += Math.ceil(g.size / SECTOR) * SECTOR;
+    const tile = document.createElement("div");
+    tile.className = "game";
+    tile.innerHTML = `<div class="ico">${gameIcon}</div><div class="name" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</div><div class="file">${escapeHtml(g.file)} · ${(g.size / 1024).toFixed(0)} Ko</div>`;
+    const del = document.createElement("button");
+    del.className = "remove";
+    del.title = "Retirer";
+    del.setAttribute("aria-label", `Retirer ${g.name}`);
+    del.textContent = "×";
+    del.disabled = installing;
+    del.onclick = async () => {
+      await fetch("/api/games/" + encodeURIComponent(g.file), { method: "DELETE" });
+      refresh();
+    };
+    tile.appendChild(del);
+    grid.appendChild(tile);
+  }
+  const add = document.createElement("label");
+  add.className = "add";
+  add.htmlFor = "picker";
+  add.innerHTML = '<div><div class="plus">+</div>Glisse des .nwa ici<br>ou clique</div>';
+  add.addEventListener("dragover", (e) => { e.preventDefault(); add.classList.add("over"); });
+  add.addEventListener("dragleave", () => add.classList.remove("over"));
+  add.addEventListener("drop", (e) => { e.preventDefault(); e.stopPropagation(); add.classList.remove("over"); upload(e.dataTransfer.files); });
+  grid.appendChild(add);
+  const cap = state.appsCapacity || 1;
+  $("meter").style.width = Math.min(100, (used / cap) * 100) + "%";
+  $("gamesInfo").textContent = `${state.games.length} jeu${state.games.length > 1 ? "x" : ""} · ~${Math.round(used / 1024)} Ko / ${Math.round(cap / 1024)} Ko`;
+  if (state.platform === "windows") {
+    $("gamesNote").textContent = "Les jeux apparaissent comme des chaînes dans le menu Wii. Sur Windows, ajouter un nouveau jeu demande la chaîne ARM (Arm GNU Toolchain).";
+  }
+}
+
+function render() {
+  renderCalc();
+  renderGames();
+  $("install").disabled = !canInstall();
+}
+
+async function refresh() {
+  if (installing) return;
+  try {
+    const r = await fetch("/api/status");
+    state = await r.json();
+  } catch { state.calculator = { connected: false }; }
+  render();
+}
+
+async function upload(files) {
+  for (const f of files) {
+    if (!f.name.toLowerCase().endsWith(".nwa")) { alert(`${f.name} n'est pas un .nwa`); continue; }
+    const r = await fetch("/api/games", { method: "POST", headers: { "X-Filename": encodeURIComponent(f.name) }, body: f });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); alert(`${f.name} : ${e.error || "refusé"}`); }
+  }
+  refresh();
+}
+
+$("picker").addEventListener("change", (e) => { upload(e.target.files); e.target.value = ""; });
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer.files.length) upload(e.dataTransfer.files); });
+
+function renderJob(job) {
+  const steps = $("steps");
+  steps.innerHTML = "";
+  for (const s of job.steps) {
+    const li = document.createElement("li");
+    li.className = s.state;
+    li.innerHTML = `<span class="s"></span><span>${escapeHtml(s.label)}</span>`;
+    steps.appendChild(li);
+  }
+  $("logBox").hidden = !job.log;
+  $("log").textContent = job.log;
+  const res = $("result");
+  res.className = "result";
+  if (job.result === "ok") {
+    res.classList.add("ok");
+    res.textContent = "Wii-OS est installé et démarre sur ta calculatrice. Passe l'écran « logiciel non officiel » avec une touche : le bureau apparaît.";
+  } else if (job.result === "error") {
+    res.classList.add("error");
+    const last = job.log.split("\n").filter((l) => l.startsWith("ERREUR")).pop() || "Erreur.";
+    res.textContent = last.replace("ERREUR: ", "");
+  }
+}
+
+$("install").onclick = async () => {
+  const r = await fetch("/api/install", { method: "POST" });
+  if (!r.ok) return;
+  installing = true;
+  render();
+  const poll = setInterval(async () => {
+    const job = await (await fetch("/api/job")).json();
+    renderJob(job);
+    if (!job.running) {
+      clearInterval(poll);
+      installing = false;
+      setTimeout(refresh, 1500);
+    }
+  }, 500);
+};
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
